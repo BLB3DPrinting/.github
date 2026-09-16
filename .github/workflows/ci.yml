@@ -4,6 +4,11 @@ name: ci
 # Called from each repo's own .github/workflows/ci.yml via `uses:`.
 # The job is named `ci` on purpose: the required status check in the
 # org ruleset is the context "ci / ci" (caller job / reusable job).
+#
+# Actions are pinned to commit SHAs; Dependabot (github-actions ecosystem)
+# opens PRs to bump them. Callers reference this workflow at @main, which is
+# acceptable because main on this repo is protected by the org ruleset
+# (PR + review required, no bypass actors).
 
 on:
   workflow_call:
@@ -37,22 +42,23 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout (full history for secret scan)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Secret scan (gitleaks)
         # Runs the gitleaks container directly; no license or action required.
+        # Mounted read-only; the container never needs to write to the workspace.
         run: |
-          docker run --rm -v "${{ github.workspace }}:/repo" \
-            ghcr.io/gitleaks/gitleaks:latest \
+          docker run --rm -v "${{ github.workspace }}:/repo:ro" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 \
             detect --source /repo --no-banner --redact --exit-code 1
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ inputs.python-version }}
-          cache: pip
 
       - name: Install dependencies
         run: |
