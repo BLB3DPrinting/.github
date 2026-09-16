@@ -1,0 +1,7 @@
+{
+  "name": "BLB3D CI (reusable)",
+  "description": "Secret scan, ruff, and pytest via the org reusable workflow. Job name must stay `ci` for the org ruleset's required check.",
+  "iconName": "check",
+  "categories": ["Python", "Continuous integration"],
+  "filePatterns": ["pyproject.toml", "requirements.txt"]
+}
