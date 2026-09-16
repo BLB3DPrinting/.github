@@ -2,8 +2,12 @@ name: ci
 
 # Reusable CI for BLB3DPrinting repositories.
 # Called from each repo's own .github/workflows/ci.yml via `uses:`.
-# The job is named `ci` on purpose: the required status check in the
-# org ruleset is the context "ci / ci" (caller job / reusable job).
+#
+# Runs on both Linux and Windows. Aeonyx and the agent hooks run on Windows in
+# production; FilaOps ships to Linux. Path handling differs between them
+# (case folding, separators), so a test that is green on one says nothing
+# about the other. The org ruleset requires both matrix legs:
+#   "ci / ci (ubuntu-latest)" and "ci / ci (windows-latest)".
 #
 # Actions are pinned to commit SHAs; Dependabot (github-actions ecosystem)
 # opens PRs to bump them. Callers reference this workflow at @main, which is
@@ -29,6 +33,10 @@ on:
         description: Run ruff
         type: boolean
         default: true
+      os:
+        description: JSON array of runner labels for the matrix
+        type: string
+        default: '["ubuntu-latest", "windows-latest"]'
 
 permissions:
   contents: read
@@ -36,10 +44,15 @@ permissions:
 jobs:
   ci:
     name: ci
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
+        shell: bash
     steps:
       - name: Checkout (full history for secret scan)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -48,8 +61,8 @@ jobs:
           persist-credentials: false
 
       - name: Secret scan (gitleaks)
-        # Runs the gitleaks container directly; no license or action required.
-        # Mounted read-only; the container never needs to write to the workspace.
+        # Linux only: Windows runners have no Docker. One scan of the history is enough.
+        if: runner.os == 'Linux'
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo:ro" \
             ghcr.io/gitleaks/gitleaks:v8.30.1 \
