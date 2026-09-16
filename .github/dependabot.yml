@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Keep the SHA-pinned actions in the reusable workflow current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, ci]
